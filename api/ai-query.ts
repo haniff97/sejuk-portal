@@ -7,8 +7,6 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY as string,
 );
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 // gemini-2.5-flash-lite: cheapest tier that still handles function calling
 // reliably. Swap to gemini-2.5-flash (or a gemini-3.x flash variant) for
 // stronger reasoning at a higher cost per call.
@@ -125,6 +123,11 @@ Keep answers concise and concrete (list order numbers/services where relevant, p
 Format your answer as plain text only — no Markdown (no **, no #, no bullet asterisks). Use line breaks and dashes ("-") for lists instead, since the UI displays raw text.`;
 
   try {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is missing in the environment variables.');
+    }
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
     let interaction = await ai.interactions.create({
       model: MODEL,
       input: question,
