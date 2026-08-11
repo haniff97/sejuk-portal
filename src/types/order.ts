@@ -28,6 +28,12 @@ export interface Order {
   final_amount: number | null;
   remarks: string | null;
   attachments: string[] | null;
+  technician_name: string | null;
+  completed_at: string | null;
+  // Payment recording (optional)
+  payment_received: number | null;
+  payment_method: string | null;
+  payment_receipt_url: string | null;
   created_at: string;
   updated_at: string;
 }
