@@ -140,4 +140,4 @@ bucket set up — see schema/policy SQL in the project notes, or ask for it agai
 
 ## Live demo
 
-[Add your Vercel URL here after deploying]
+https://sejuk-portal-psul8lcoc-haniff-hamdans-projects.vercel.app/
