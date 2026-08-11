@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { logAudit } from '../lib/audit';
 import type { Order, OrderStatus } from '../types/order';
 import StatusBadge from '../components/StatusBadge';
+import AIQueryPanel from '../components/AIQueryPanel';
+import WorkflowSupervisorPanel from '../components/WorkflowSupervisorPanel';
+import AuditLogPanel from '../components/AuditLogPanel';
+import KPIDashboard from '../components/KPIDashboard';
+
+type Tab = 'review' | 'kpi';
 
 export default function ManagerPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('review');
 
   async function loadOrders() {
     setLoading(true);
@@ -38,6 +46,15 @@ export default function ManagerPage() {
       return;
     }
     setOrders((prev) => prev.map((o) => (o.id === order.id ? (data as Order) : o)));
+
+    logAudit({
+      entityId: order.id,
+      orderNo: order.order_no,
+      action: status === 'Reviewed' ? 'order_reviewed' : 'order_closed',
+      actorRole: 'Manager',
+      actorName: 'Manager',
+      detail: `Status changed from ${order.status} to ${status}`,
+    });
   }
 
   const pendingReview = orders.filter((o) => o.status === 'Job Done');
@@ -68,13 +85,34 @@ export default function ManagerPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-6 text-slate-100 space-y-8">
-      <h1 className="text-xl font-semibold">Manager — Review</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Manager</h1>
+        <div className="flex rounded-md border border-slate-700 overflow-hidden text-sm">
+          <button
+            onClick={() => setTab('review')}
+            className={`px-3 py-1.5 ${tab === 'review' ? 'bg-sky-600 text-white' : 'bg-slate-900 text-slate-400'}`}
+          >
+            Review
+          </button>
+          <button
+            onClick={() => setTab('kpi')}
+            className={`px-3 py-1.5 ${tab === 'kpi' ? 'bg-sky-600 text-white' : 'bg-slate-900 text-slate-400'}`}
+          >
+            KPI Dashboard
+          </button>
+        </div>
+      </div>
 
       {loading && <p className="text-slate-400">Loading…</p>}
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
-      {!loading && !error && (
+      {!loading && !error && tab === 'kpi' && <KPIDashboard orders={orders} />}
+
+      {!loading && !error && tab === 'review' && (
         <>
+          <AIQueryPanel />
+          <WorkflowSupervisorPanel orders={orders} />
+          <AuditLogPanel />
           <section>
             <h2 className="text-lg font-semibold mb-3">
               Pending Review ({pendingReview.length})

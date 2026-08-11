@@ -19,10 +19,23 @@ field, Managers review and close them out.
   completion and on any completed job in the technician's list.
 - **Manager review flow** (ties the above together): review queue for `Job Done`
   orders → `Reviewed` → `Closed`, plus a read-only view of in-progress orders.
+- **AI Operations Query**: a chat panel in the Manager view where questions like
+  "How many jobs were completed today?" or "Which technician completed the most
+  jobs this week?" are answered from live order data. The model is given two
+  fixed, parameterized query functions (`query_jobs`, `count_jobs_by_technician`)
+  via function calling — it never sees raw SQL or has direct table access, only
+  picks which pre-defined query fits the question and what parameters to use.
+- **AI Workflow Supervisor**: a rule-based check (final amount ≥30% over quote, or
+  a completed job with no photos) that flags orders automatically in the Manager
+  view. Detection is plain business logic, not AI — the model's only role is
+  phrasing the detected flags into a readable summary.
 
 ## Tech stack
 
-React + TypeScript (Vite) · Tailwind CSS v4 · Supabase (Postgres + Storage) · Vercel
+React + TypeScript (Vite) · Tailwind CSS v4 · Supabase (Postgres + Storage) ·
+Vercel (including two serverless functions for the AI modules) · Gemini API
+(`gemini-2.5-flash-lite`, chosen for cost — function calling doesn't need a
+larger model for this kind of structured, low-ambiguity task)
 
 Auth is a mock role switcher (Admin/Technician/Manager), per the assessment brief —
 no real authentication implemented.
@@ -49,6 +62,14 @@ no real authentication implemented.
   `orders` table and the `job-attachments` storage bucket, since there's no real auth
   layer to scope policies to. In production this would be tightened to
   role/user-scoped policies once real authentication exists.
+- **AI query surface is deliberately narrow.** The Operations Query and Workflow
+  Supervisor modules both give the model a small, fixed set of parameterized
+  functions rather than any form of raw database or SQL access — matching the
+  brief's explicit requirement that "the AI assistant should not rely on
+  unrestricted access to the entire database." Anomaly *detection* in the
+  Workflow Supervisor is plain rule-based logic (threshold checks on data already
+  in Supabase); the AI's role there is limited to phrasing already-detected flags
+  into a readable summary, not deciding what counts as anomalous.
 
 ## Assumptions
 
@@ -63,14 +84,13 @@ no real authentication implemented.
 
 ## What's not built (and why)
 
-- **AI Operations Query module**: intentionally deferred. Priority was a fully working
-  core workflow across all three roles rather than a partially working core plus a
-  rushed AI feature. [Update this section if Phase 7 gets built before submission.]
-- **KPI dashboard (bonus)**: same reasoning — out of scope for the time available.
-- **Real authentication**: brief explicitly allows a mock role switch; implemented as
-  specified.
-- **Advanced AI challenges** (document understanding, operational insight): not
-  attempted.
+- **KPI dashboard (bonus)**: out of scope given the time available — prioritized
+  finishing both AI modules over an additional bonus item.
+- **Real authentication**: brief explicitly allows a mock role switch; implemented
+  as specified.
+- **AI Document Understanding / AI Operational Insight** (optional advanced AI
+  challenges): not attempted, in favor of the Operations Query and Workflow
+  Supervisor modules.
 
 ## What I'd improve for a real production system
 
@@ -85,14 +105,18 @@ no real authentication implemented.
   fully capture beyond `updated_at`.
 - Optimistic UI updates and proper loading/error states throughout, rather than
   full-list refetches after each mutation.
+- Rate-limiting and cost tracking on the two AI endpoints — right now there's no
+  guard against repeated/expensive queries, which a production system serving
+  real managers would need.
 
 ## Self-assessment
 
 - **Easiest module**: Module 1 (Admin order submission) — standard CRUD form over a
   single table.
-- **Hardest module**: Module 3 (WhatsApp trigger) — not technically complex, but
-  required the most judgment calls about scope (manual vs. automated send, phone
-  number normalization) given no real WhatsApp Business API access.
+- **Hardest module**: the AI Operations Query module — not the API integration
+  itself, but getting the function-calling tool surface narrow enough to satisfy
+  "controlled queries, not unrestricted database access" while still covering the
+  brief's example questions.
 - **AI tool use while building**: built iteratively with Claude — scaffolding each
   module, then verifying with `tsc --noEmit` and `vite build` after each addition
   before moving on.
@@ -101,8 +125,23 @@ no real authentication implemented.
 
 ```bash
 npm install
-cp .env
+cp .env.example .env   # fill in Supabase URL/anon key (both VITE_ and server-side
+                        # versions) and GEMINI_API_KEY
+```
+
+The core app (Modules 1–3, Manager review) runs with:
+
+```bash
 npm run dev
+```
+
+The AI modules (Operations Query, Workflow Supervisor) are Vercel serverless
+functions under `/api` — plain `vite dev` doesn't run these. Use the Vercel CLI
+instead:
+
+```bash
+npm install -g vercel
+vercel dev
 ```
 
 Requires a Supabase project with the `orders` table and `job-attachments` storage
@@ -110,3 +149,4 @@ bucket set up — see schema/policy SQL in the project notes, or ask for it agai
 
 ## Live demo
 
+[Add your Vercel URL here after deploying]
