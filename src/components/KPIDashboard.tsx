@@ -171,7 +171,7 @@ export default function KPIDashboard({ orders }: { orders: Order[] }) {
                   contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }}
                   labelStyle={{ color: '#0f172a', fontWeight: 'bold' }}
                   itemStyle={{ color: '#4f46e5' }}
-                  formatter={(v: number) => [`${v} jobs`, 'Completed']}
+                  formatter={(v: any) => [`${v} jobs`, 'Completed']}
                 />
                 <Bar dataKey="jobsCompleted" fill="url(#barGrad)" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -199,8 +199,8 @@ export default function KPIDashboard({ orders }: { orders: Order[] }) {
                 <Tooltip
                   contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }}
                   labelStyle={{ color: '#0f172a', fontWeight: 'bold' }}
-                  formatter={(v: number, name: string) => [
-                    name === 'jobsCompleted' ? `${v} jobs` : `RM ${v.toFixed(2)}`,
+                  formatter={(v: any, name: any) => [
+                    name === 'jobsCompleted' ? `${v} jobs` : `RM ${Number(v).toFixed(2)}`,
                     name === 'jobsCompleted' ? 'Jobs Done' : 'Revenue',
                   ]}
                 />
@@ -231,7 +231,7 @@ export default function KPIDashboard({ orders }: { orders: Order[] }) {
               <Tooltip
                 contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }}
                 labelStyle={{ color: '#0f172a', fontWeight: 'bold' }}
-                formatter={(v: number) => [`RM ${v.toFixed(2)}`, 'Revenue']}
+                formatter={(v: any) => [`RM ${Number(v).toFixed(2)}`, 'Revenue']}
               />
               <Bar dataKey="totalAmount" fill="url(#revGrad)" radius={[6, 6, 0, 0]} />
             </BarChart>

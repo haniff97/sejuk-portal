@@ -37,3 +37,14 @@ export interface Order {
   created_at: string;
   updated_at: string;
 }
+
+export interface AuditLogEntry {
+  id: string;
+  entity_id: string;
+  order_no: string;
+  action: string;
+  actor_role: string;
+  actor_name: string;
+  detail: string;
+  created_at: string;
+}
