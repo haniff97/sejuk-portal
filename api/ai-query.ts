@@ -14,7 +14,7 @@ const functionDeclarations = [
   {
     name: 'query_jobs',
     description:
-      'List jobs matching optional filters: technician name, status, and/or a date range (based on updated_at). Use this for questions asking "what jobs" or "which orders".',
+      'List jobs matching optional filters: technician name (partial match, case-insensitive), status, and/or a date range. Use this for questions asking "what jobs" or "which orders". Always filter by status=Job Done when asked about completed jobs.',
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -58,7 +58,7 @@ async function runQueryJobs(input: {
     .order('updated_at', { ascending: false })
     .limit(50);
 
-  if (input.technician) query = query.eq('assigned_technician', input.technician);
+  if (input.technician) query = query.ilike('assigned_technician', `%${input.technician}%`);
   if (input.status) query = query.eq('status', input.status);
   if (input.since) query = query.gte('updated_at', input.since);
   if (input.until) query = query.lte('updated_at', input.until);
@@ -90,6 +90,7 @@ async function runCountJobsByTechnician(input: {
 }
 
 async function executeTool(name: string, args: Record<string, unknown>) {
+  console.log('[ai-query] tool call:', name, JSON.stringify(args));
   if (name === 'query_jobs') return runQueryJobs(args as Parameters<typeof runQueryJobs>[0]);
   if (name === 'count_jobs_by_technician')
     return runCountJobsByTechnician(args as Parameters<typeof runCountJobsByTechnician>[0]);
@@ -113,13 +114,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const today = new Date().toISOString().slice(0, 10);
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const systemInstruction = `You are an operations data assistant for an aircon service company.
-Today's date is ${today}. "This week" means the last 7 days; "today" means the current calendar date.
+Today's date is ${today}. Seven days ago was ${sevenDaysAgo}.
+"This week" means since ${sevenDaysAgo}. "Today" means ${today}.
 You have access to two database query tools: query_jobs and count_jobs_by_technician.
 You MUST always call a tool first to fetch live data before answering — never answer from memory or training data.
-Do NOT ask for more context. Just call the appropriate tool with whatever parameters fit the question.
-After receiving tool results, answer concisely in plain text.
-If the tool returns no data, say "No matching jobs found." rather than guessing.
+Do NOT ask for more context. Call the appropriate tool immediately.
+Important rules for status:
+- "completed" or "done" jobs = use status "Job Done". Do NOT also add a date filter unless the question specifically asks about a time period.
+- If asked about a time period ("this week", "today"), add the since/until date parameters.
+- If no time period is mentioned, do NOT add since/until — return all matching jobs.
+After receiving tool results, answer concisely in plain text (list order numbers and services).
+If the tool returns empty results, say "No matching jobs found for [criteria]." and be specific about what was searched.
 Format your final answer as plain text only — no Markdown, no **, no #, no bullet asterisks. Use dashes ("-") and line breaks for lists.`;
 
   try {
