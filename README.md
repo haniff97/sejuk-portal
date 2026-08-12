@@ -110,7 +110,7 @@ The AI Operations Query module — specifically integrating function calling cor
 As detailed in the section above, I would focus heavily on true authentication/authorization (Supabase Auth + RLS), automated messaging (WhatsApp Business API), and backend performance optimisations (materialized views for KPIs and caching) to ensure it scales beyond a prototype.
 
 **How did you use AI tools while building this project?**
-Built iteratively with AI assistants (Claude, Gemini / Antigravity). I used them to scaffold each module, generate boilerplate for React/Tailwind layouts, and plan out database migrations. Specifically, they were highly useful in refactoring the UI into a modern and card layout based design, building out the responsive Recharts-based KPI Dashboard, and help me plan writing the SQL migration to add optional payment tracking fields to the schema. Code was verified continuously with `tsc --noEmit` and `vite build` after each addition.
+Built iteratively with AI assistants (Claude, Gemini / Antigravity). I used them to scaffold each module, generate boilerplate for React/Tailwind layouts, and plan out database migrations. Specifically, they were highly useful in help me working on the UI into a modern and card-layout based design, building out the responsive Recharts-based KPI Dashboard, and help me plan writing the SQL migration to add optional payment tracking fields to the schema. Code was verified continuously with `tsc --noEmit` and `vite build` after each addition.
 
 ## Running locally
 
