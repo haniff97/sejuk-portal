@@ -3,7 +3,6 @@ import { GoogleGenAI } from '@google/genai';
 
 const MODEL = 'gemini-3.5-flash-lite';
 
-
 interface FlagInput {
   orderId: string;
   orderNo: string;
@@ -31,24 +30,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ summary: 'No issues detected.' });
   }
 
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'GEMINI_API_KEY is missing in the environment variables.' });
+  }
+
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY is missing in the environment variables.');
-    }
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    const interaction = await ai.interactions.create({
+    const response = await ai.models.generateContent({
       model: MODEL,
-      system_instruction:
+      systemInstruction:
         'You summarize flagged order-review issues for an operations manager. ' +
         'Given a JSON list of flags, write one short line per flag, grouped naturally. ' +
         'Be direct and factual — no speculation about cause, just state what was detected. ' +
         'Do not invent flags beyond what is given. ' +
         'Format as plain text only — no Markdown (no **, no bullet asterisks). Use line breaks and dashes ("-") for lists instead.',
-      input: JSON.stringify(flags),
+      contents: [{ role: 'user', parts: [{ text: JSON.stringify(flags) }] }],
     });
 
-    return res.status(200).json({ summary: interaction.output_text ?? '' });
+    const summary = response.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('').trim() ?? '';
+    return res.status(200).json({ summary });
   } catch (err) {
     return res
       .status(500)

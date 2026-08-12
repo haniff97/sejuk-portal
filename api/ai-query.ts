@@ -1,57 +1,55 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 
 const supabase = createClient(
   process.env.SUPABASE_URL as string,
   process.env.SUPABASE_ANON_KEY as string,
 );
 
-// gemini-2.5-flash-lite: cheapest tier that still handles function calling
-// reliably. Swap to gemini-2.5-flash (or a gemini-3.x flash variant) for
-// stronger reasoning at a higher cost per call.
+// gemini-3.5-flash-lite: cheapest tier that still handles function calling
+// reliably. Swap to gemini-2.5-flash for stronger reasoning at a higher cost.
 const MODEL = 'gemini-3.5-flash-lite';
 
 // Fixed, controlled query surface. The model can only call these — it never
-// gets raw SQL or direct table access. This is what "AI responses based on
-// structured data retrieved through controlled queries" (per the brief)
-// means in practice: the model picks *which* pre-defined query fits the
-// question and *what parameters* to use, but not the query shape itself.
+// gets raw SQL or direct table access.
 const tools = [
   {
-    type: 'function' as const,
-    name: 'query_jobs',
-    description:
-      'List jobs matching optional filters: technician name, status, and/or a date range (based on updated_at). Use this for questions asking "what jobs" or "which orders".',
-    parameters: {
-      type: 'object',
-      properties: {
-        technician: { type: 'string', description: 'e.g. Ali, John, Bala, Yusoff' },
-        status: {
-          type: 'string',
-          enum: ['New', 'Assigned', 'In Progress', 'Job Done', 'Reviewed', 'Closed'],
+    functionDeclarations: [
+      {
+        name: 'query_jobs',
+        description:
+          'List jobs matching optional filters: technician name, status, and/or a date range (based on updated_at). Use this for questions asking "what jobs" or "which orders".',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            technician: { type: Type.STRING, description: 'e.g. Ali, John, Bala, Yusoff' },
+            status: {
+              type: Type.STRING,
+              enum: ['New', 'Assigned', 'In Progress', 'Job Done', 'Reviewed', 'Closed'],
+            },
+            since: { type: Type.STRING, description: 'ISO date, inclusive lower bound on updated_at' },
+            until: { type: Type.STRING, description: 'ISO date, inclusive upper bound on updated_at' },
+          },
         },
-        since: { type: 'string', description: 'ISO date, inclusive lower bound on updated_at' },
-        until: { type: 'string', description: 'ISO date, inclusive upper bound on updated_at' },
       },
-    },
-  },
-  {
-    type: 'function' as const,
-    name: 'count_jobs_by_technician',
-    description:
-      'Count jobs per technician within an optional date range and status. Use this for "who completed the most" or "how many jobs" style questions.',
-    parameters: {
-      type: 'object',
-      properties: {
-        status: {
-          type: 'string',
-          enum: ['New', 'Assigned', 'In Progress', 'Job Done', 'Reviewed', 'Closed'],
+      {
+        name: 'count_jobs_by_technician',
+        description:
+          'Count jobs per technician within an optional date range and status. Use this for "who completed the most" or "how many jobs" style questions.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            status: {
+              type: Type.STRING,
+              enum: ['New', 'Assigned', 'In Progress', 'Job Done', 'Reviewed', 'Closed'],
+            },
+            since: { type: Type.STRING, description: 'ISO date, inclusive lower bound on updated_at' },
+            until: { type: Type.STRING, description: 'ISO date, inclusive upper bound on updated_at' },
+          },
         },
-        since: { type: 'string', description: 'ISO date, inclusive lower bound on updated_at' },
-        until: { type: 'string', description: 'ISO date, inclusive upper bound on updated_at' },
       },
-    },
+    ],
   },
 ];
 
@@ -98,9 +96,9 @@ async function runCountJobsByTechnician(input: {
   return counts;
 }
 
-async function executeTool(name: string, input: Record<string, unknown>) {
-  if (name === 'query_jobs') return runQueryJobs(input);
-  if (name === 'count_jobs_by_technician') return runCountJobsByTechnician(input);
+async function executeTool(name: string, args: Record<string, unknown>) {
+  if (name === 'query_jobs') return runQueryJobs(args as Parameters<typeof runQueryJobs>[0]);
+  if (name === 'count_jobs_by_technician') return runCountJobsByTechnician(args as Parameters<typeof runCountJobsByTechnician>[0]);
   throw new Error(`Unknown tool: ${name}`);
 }
 
@@ -114,6 +112,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'question is required' });
   }
 
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'GEMINI_API_KEY is missing in the environment variables.' });
+  }
+
   const today = new Date().toISOString().slice(0, 10);
   const systemInstruction = `You are an operations assistant for an aircon service company.
 Today's date is ${today}. "This week" means the last 7 days; "today" means the current calendar date.
@@ -123,61 +125,70 @@ Keep answers concise and concrete (list order numbers/services where relevant, p
 Format your answer as plain text only — no Markdown (no **, no #, no bullet asterisks). Use line breaks and dashes ("-") for lists instead, since the UI displays raw text.`;
 
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY is missing in the environment variables.');
-    }
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    let interaction = await ai.interactions.create({
-      model: MODEL,
-      input: question,
-      system_instruction: systemInstruction,
-      tools,
-    });
+    // Build the conversation history for multi-turn tool use
+    const contents: Array<{ role: string; parts: Array<Record<string, unknown>> }> = [
+      { role: 'user', parts: [{ text: question }] },
+    ];
 
-    // Tool-use loop: keep executing controlled queries until the model has
-    // enough to answer in plain text. Bounded to a few rounds to avoid
-    // runaway calls.
     let rounds = 0;
-    while (rounds < 4) {
-      const functionCallSteps = interaction.steps.filter(
-        (s): s is Extract<typeof s, { type: 'function_call' }> => s.type === 'function_call',
-      );
-      if (functionCallSteps.length === 0) break;
+    let finalAnswer = '';
+
+    // Tool-use loop: keep executing controlled queries until the model responds
+    // in plain text. Bounded to avoid runaway calls.
+    while (rounds < 5) {
+      const response = await ai.models.generateContent({
+        model: MODEL,
+        systemInstruction,
+        contents,
+        tools,
+      });
+
+      const candidate = response.candidates?.[0];
+      if (!candidate) break;
+
+      const parts = candidate.content?.parts ?? [];
+      const functionCallParts = parts.filter((p) => p.functionCall);
+
+      // No tool calls — model gave a text answer
+      if (functionCallParts.length === 0) {
+        finalAnswer = parts.map((p) => p.text ?? '').join('').trim();
+        break;
+      }
+
       rounds++;
 
-      const functionResults = [];
-      for (const step of functionCallSteps) {
+      // Add model's tool-call turn to history
+      contents.push({ role: 'model', parts: parts as Array<Record<string, unknown>> });
+
+      // Execute all tool calls and collect results
+      const toolResponseParts: Array<Record<string, unknown>> = [];
+      for (const part of functionCallParts) {
+        const { name, args } = part.functionCall as { name: string; args: Record<string, unknown> };
         try {
-          const result = await executeTool(step.name, step.arguments as Record<string, unknown>);
-          functionResults.push({
-            type: 'function_result' as const,
-            name: step.name,
-            call_id: step.id,
-            result: JSON.stringify(result),
+          const result = await executeTool(name, args ?? {});
+          toolResponseParts.push({
+            functionResponse: {
+              name,
+              response: { output: JSON.stringify(result) },
+            },
           });
         } catch (err) {
-          functionResults.push({
-            type: 'function_result' as const,
-            name: step.name,
-            call_id: step.id,
-            result: `Error: ${err instanceof Error ? err.message : 'query failed'}`,
-            is_error: true,
+          toolResponseParts.push({
+            functionResponse: {
+              name,
+              response: { error: err instanceof Error ? err.message : 'query failed' },
+            },
           });
         }
       }
 
-      interaction = await ai.interactions.create({
-        model: MODEL,
-        previous_interaction_id: interaction.id,
-        input: functionResults,
-        tools,
-      });
+      // Add tool results to history for next turn
+      contents.push({ role: 'user', parts: toolResponseParts });
     }
 
-    return res
-      .status(200)
-      .json({ answer: interaction.output_text || "I couldn't find an answer to that." });
+    return res.status(200).json({ answer: finalAnswer || "I couldn't find an answer to that." });
   } catch (err) {
     return res
       .status(500)
