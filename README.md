@@ -34,7 +34,7 @@ field, Managers review and close them out.
 
 React + TypeScript (Vite) · Tailwind CSS v4 · Supabase (Postgres + Storage) ·
 Vercel (including two serverless functions for the AI modules) · Gemini API
-(`gemini-2.5-flash-lite`, chosen for cost — function calling doesn't need a
+(`gemini-3.5-flash-lite`, chosen for cost — function calling doesn't need a
 larger model for this kind of structured, low-ambiguity task)
 
 Auth is a mock role switcher (Admin/Technician/Manager), per the assessment brief —
@@ -70,6 +70,9 @@ no real authentication implemented.
   Workflow Supervisor is plain rule-based logic (threshold checks on data already
   in Supabase); the AI's role there is limited to phrasing already-detected flags
   into a readable summary, not deciding what counts as anomalous.
+  - **Optional Advanced AI Challenges**: Implemented.
+  - **AI Operational Insight**: Implemented via the **Operations Query** module, allowing managers to ask natural language questions about technician performance and job statuses.
+  - **Workflow Supervisor (Anomaly Detection)**: Evaluates completed jobs against rules (e.g., missing photos, price variance) and uses AI to generate concise summaries for managers.
 
 ## Assumptions
 
@@ -86,9 +89,6 @@ no real authentication implemented.
 
 - **Real authentication**: brief explicitly allows a mock role switch; implemented
   as specified via a simple unified Login Page.
-- **AI Document Understanding / AI Operational Insight** (optional advanced AI
-  challenges): not attempted, in favor of the Operations Query and Workflow
-  Supervisor modules.
 
 ## What I'd improve for a real production system
 
@@ -96,7 +96,7 @@ no real authentication implemented.
 - **Workflow separation**: Separate "order intake" and "technician assignment" as distinct admin actions, rather than assigning at creation time.
 - **Automated Notifications**: WhatsApp Business API integration for automatic sends instead of a manual deep-link button, plus delivery status tracking.
 - **Performance**: Optimistic UI updates and proper loading/error states throughout, rather than full-list refetches after each mutation. Pre-aggregation of statistics for the KPI Dashboard in the database (e.g., using materialized views) as data grows.
-- **AI Safeguards**: Rate-limiting and cost tracking on the two AI endpoints — right now there's no guard against repeated/expensive queries, which a production system serving real managers would need.
+- **AI Safeguards**: Rate-limiting and cost tracking on the two AI endpoints — right now there's no guard against repeated/expensive queries, which a production system serving real managers would need. The function-calling tool surface already acts as a partial safeguard (the model can only call two pre-defined, parameterised queries and cannot access the database directly), but proper rate-limiting per session and cost alerts should be added.
 
 ## Self-assessment
 
@@ -104,13 +104,13 @@ no real authentication implemented.
 Module 1 (Admin order submission) — standard CRUD form over a single table. The Technician portal was also straightforward, simply listing assigned jobs and providing a form to complete them.
 
 **Which module was hardest?**
-The AI Operations Query module — not the API integration itself, but getting the function-calling tool surface narrow enough to satisfy "controlled queries, not unrestricted database access" while still covering the brief's example questions.
+The AI Operations Query module — specifically integrating function calling correctly with the `@google/genai` v2 SDK. The SDK's `generateContent` only accepts three top-level fields (`model`, `contents`, `config`), and all configuration — including `systemInstruction`, `tools`, and `toolConfig` — must be nested inside `config`. Passing them at the top level causes them to be silently ignored with no error thrown and no TypeScript warning, which made the bug extremely difficult to diagnose. The model appeared to work (no crash) but had no tools and ignored all instructions, responding from training data instead of querying the database.
 
 **What would you improve in a real production system?**
-As detailed in the section above, I would focus heavily on true authentication/authorization (Supabase Auth + RLS), automated messaging (WhatsApp Business API), and backend performance optimizations (materialized views for KPIs and caching) to ensure it scales beyond a prototype.
+As detailed in the section above, I would focus heavily on true authentication/authorization (Supabase Auth + RLS), automated messaging (WhatsApp Business API), and backend performance optimisations (materialized views for KPIs and caching) to ensure it scales beyond a prototype.
 
 **How did you use AI tools while building this project?**
-Built iteratively with AI assistants (Claude, Gemini / Antigravity). I used them to scaffold each module, generate boilerplate for React/Tailwind layouts, and plan out database migrations. Specifically, they were highly useful in refactoring the UI into a modern, vibrant light mode, building out the responsive Recharts-based KPI Dashboard, and writing the SQL migration to add optional payment tracking fields to the schema. Code was verified continuously with `tsc --noEmit` and `vite build` after each addition.
+Built iteratively with AI assistants (Claude, Gemini / Antigravity). I used them to scaffold each module, generate boilerplate for React/Tailwind layouts, and plan out database migrations. Specifically, they were highly useful in refactoring the UI into a modern, vibrant light mode, building out the responsive Recharts-based KPI Dashboard, and help me plan writing the SQL migration to add optional payment tracking fields to the schema. Code was verified continuously with `tsc --noEmit` and `vite build` after each addition.
 
 ## Running locally
 
