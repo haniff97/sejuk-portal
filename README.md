@@ -89,18 +89,73 @@ no real authentication implemented.
   `Job Done` when a technician completes them. Left in the schema/UI filters for
   forward compatibility (e.g. a future "start job" action).
 
+## AI integration
+
+Both AI features run as Vercel serverless functions (`/api/ai-query`, `/api/ai-supervisor`)
+using the Gemini API (`gemini-3.5-flash-lite`) via the `@google/genai` v2 SDK with
+function calling.
+
+### What types of AI queries are supported
+
+The **Operations Query** panel (Manager view) accepts free-form natural language questions
+about the live order data. Supported query types:
+
+| Question type | Example |
+|---|---|
+| Job lookup by technician | "What jobs did Ali complete?" |
+| Job lookup by status | "Show me all in-progress orders" |
+| Count by technician | "Who completed the most jobs this week?" |
+| Count by status | "How many jobs are done?" |
+| Time-filtered queries | "What jobs were completed today?" / "...this week?" |
+| Combined filters | "How many jobs did Bala complete this week?" |
+
+The model is constrained to two pre-defined, parameterised functions (`query_jobs`,
+`count_jobs_by_technician`). It picks which function fits the question and what
+parameters to pass — it has no direct database access and cannot execute arbitrary
+queries. On the first turn it is forced to call a tool (`FunctionCallingConfigMode.ANY`)
+before answering, so it always retrieves live data rather than guessing from training data.
+
+The **Workflow Supervisor** does not accept queries — it runs automatically when the
+Manager opens the dashboard, flags orders matching two hardcoded rules (final amount
+≥30% over quoted price; completed job with zero attachments), and uses the AI only to
+phrase the already-detected flags into a readable summary paragraph.
+
+### Limitations of the AI implementation
+
+- **No free-form SQL / open-ended queries.** The model can only call two fixed functions.
+  Questions outside those (e.g. "What is the average job duration?") will return no
+  useful answer because there is no matching tool.
+- **50-row cap per query.** `query_jobs` limits results to 50 rows to keep response
+  size manageable. High-volume datasets may return incomplete results.
+- **No memory across questions.** Each question in the Operations Query panel is an
+  independent API call; the model has no context of previous questions in the session.
+- **No rate-limiting or cost controls.** There is no guard against repeated or expensive
+  queries. In production, per-session rate limiting and cost alerts would be needed.
+- **Workflow Supervisor rules are hardcoded.** The 30% price variance threshold and the
+  "zero attachments" rule are fixed in code; they cannot be configured without a code
+  change.
+- **Supervisor re-runs on every page load.** The Workflow Supervisor calls the AI on
+  every Manager dashboard load, not just when new flags appear. This makes each visit
+  cost an API call even if nothing has changed.
+
 ## What's not built (and why)
 
 - **Real authentication**: brief explicitly allows a mock role switch; implemented
   as specified via a simple unified Login Page.
 
-## What I'd improve for a real production system
+## Implementation limitations
 
-- **Authentication & Security**: Real authentication (Supabase Auth) with role-scoped RLS policies instead of the current permissive `using (true)` policies.
-- **Workflow separation**: Separate "order intake" and "technician assignment" as distinct admin actions, rather than assigning at creation time.
-- **Automated Notifications**: WhatsApp Business API integration for automatic sends instead of a manual deep-link button, plus delivery status tracking.
-- **Performance**: Optimistic UI updates and proper loading/error states throughout, rather than full-list refetches after each mutation. Pre-aggregation of statistics for the KPI Dashboard in the database (e.g., using materialized views) as data grows.
-- **AI Safeguards**: Rate-limiting and cost tracking on the two AI endpoints; right now there's no guard against repeated/expensive queries, which a production system serving real managers would need. The function-calling tool surface already acts as a partial safeguard (the model can only call two pre-defined, parameterised queries and cannot access the database directly), but proper rate-limiting per session and cost alerts should be added.
+- **Permissive RLS**: Row Level Security is enabled on `orders` and `job-attachments`
+  but uses `using (true)` — any authenticated or anon request can read/write all rows.
+  Without a real auth layer there is no way to scope policies to a user or role.
+- **No optimistic UI**: Every mutation (status change, job completion) triggers a full
+  list refetch from Supabase. At low data volumes this is fine; at scale it would need
+  optimistic updates and pagination.
+- **WhatsApp is a deep link, not an automated send**: Requires the technician to tap a
+  button; an actual automatic send needs the paid WhatsApp Business API.
+- **KPI Dashboard is client-side aggregated**: Stats are computed in the browser from
+  a full `orders` fetch. As order volume grows this would need server-side
+  pre-aggregation (e.g. materialized views or an edge function).
 
 ## Self-assessment
 
