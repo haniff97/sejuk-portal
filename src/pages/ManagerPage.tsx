@@ -266,11 +266,13 @@ export default function ManagerPage() {
                 </span>
                 Closed ({closed.length})
               </h2>
-              <ul className="space-y-3 opacity-60">
-                {closed.map((o) => (
-                  <OrderRow key={o.id} order={o} />
-                ))}
-              </ul>
+              <div className="max-h-[480px] overflow-y-auto pr-1">
+                <ul className="space-y-3 opacity-60">
+                  {closed.map((o) => (
+                    <OrderRow key={o.id} order={o} />
+                  ))}
+                </ul>
+              </div>
             </section>
           )}
         </>
