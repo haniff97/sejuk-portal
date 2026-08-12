@@ -39,14 +39,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const response = await ai.models.generateContent({
       model: MODEL,
-      systemInstruction:
-        'You are a report formatter for an aircon service operations manager. ' +
-        'Your ONLY job is to immediately write a short plain-text summary of the flagged issues provided. ' +
-        'Do NOT ask questions. Do NOT offer options. Do NOT explain what you could do. ' +
-        'Just write the summary directly — one short sentence per flag, grouped by order. ' +
-        'Be factual and direct. Do not invent anything beyond the flags given. ' +
-        'Format as plain text only — no Markdown, no **, no #, no bullet asterisks. ' +
-        'Use dashes ("-") and line breaks for lists.',
       contents: [
         {
           role: 'user',
@@ -59,6 +51,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ],
         },
       ],
+      config: {
+        systemInstruction:
+          'You are a report formatter for an aircon service operations manager. ' +
+          'Your ONLY job is to immediately write a short plain-text summary of the flagged issues provided. ' +
+          'Do NOT ask questions. Do NOT offer options. Do NOT explain what you could do. ' +
+          'Just write the summary directly — one short sentence per flag, grouped by order. ' +
+          'Be factual and direct. Do not invent anything beyond the flags given. ' +
+          'Format as plain text only — no Markdown, no **, no #, no bullet asterisks. ' +
+          'Use dashes ("-") and line breaks for lists.',
+      },
     });
 
     const summary = response.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('').trim() ?? '';
