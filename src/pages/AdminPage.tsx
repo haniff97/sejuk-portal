@@ -57,26 +57,28 @@ export default function AdminPage() {
         {!loading && !error && orders.length === 0 && (
           <p className="text-slate-500 italic bg-slate-50 p-6 rounded-xl border border-slate-100 text-center">No orders yet.</p>
         )}
-        <ul className="space-y-3">
-          {orders.map((o) => (
-            <li
-              key={o.id}
-              className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all p-4"
-            >
-              <div>
-                <div className="font-semibold text-slate-900 text-lg">{o.order_no} — {o.customer_name}</div>
-                <div className="text-sm text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
-                  <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">{o.service_type}</span>
-                  <span className="text-slate-300">•</span>
-                  <span>{o.assigned_technician ?? 'Unassigned'}</span>
-                  <span className="text-slate-300">•</span>
-                  <span className="font-medium text-emerald-600">RM {o.quoted_price.toFixed(2)}</span>
+        <div className="max-h-[480px] overflow-y-auto pr-1">
+          <ul className="space-y-3">
+            {orders.map((o) => (
+              <li
+                key={o.id}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all p-4"
+              >
+                <div>
+                  <div className="font-semibold text-slate-900 text-lg">{o.order_no} — {o.customer_name}</div>
+                  <div className="text-sm text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+                    <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">{o.service_type}</span>
+                    <span className="text-slate-300">•</span>
+                    <span>{o.assigned_technician ?? 'Unassigned'}</span>
+                    <span className="text-slate-300">•</span>
+                    <span className="font-medium text-emerald-600">RM {o.quoted_price.toFixed(2)}</span>
+                  </div>
                 </div>
-              </div>
-              <StatusBadge status={o.status} />
-            </li>
-          ))}
-        </ul>
+                <StatusBadge status={o.status} />
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );
