@@ -27,7 +27,7 @@ field, Managers review and close them out.
   picks which pre-defined query fits the question and what parameters to use.
 - **AI Workflow Supervisor**: a rule-based check (final amount ≥30% over quote, or
   a completed job with no photos) that flags orders automatically in the Manager
-  view. Detection is plain business logic, not AI — the model's only role is
+  view. Detection is plain business logic, the AI model's only role is
   phrasing the detected flags into a readable summary.
 
 ## Tech stack
@@ -37,7 +37,7 @@ Vercel (including two serverless functions for the AI modules) · Gemini API
 (`gemini-3.5-flash-lite`, chosen for cost — function calling doesn't need a
 larger model for this kind of structured, low-ambiguity task)
 
-Auth is a mock role switcher (Admin/Technician/Manager), per the assessment brief —
+Auth is a mock role switcher (Admin/Technician/Manager), per the assessment brief,
 no real authentication implemented.
 
 ## Architecture decisions
@@ -96,7 +96,7 @@ no real authentication implemented.
 - **Workflow separation**: Separate "order intake" and "technician assignment" as distinct admin actions, rather than assigning at creation time.
 - **Automated Notifications**: WhatsApp Business API integration for automatic sends instead of a manual deep-link button, plus delivery status tracking.
 - **Performance**: Optimistic UI updates and proper loading/error states throughout, rather than full-list refetches after each mutation. Pre-aggregation of statistics for the KPI Dashboard in the database (e.g., using materialized views) as data grows.
-- **AI Safeguards**: Rate-limiting and cost tracking on the two AI endpoints — right now there's no guard against repeated/expensive queries, which a production system serving real managers would need. The function-calling tool surface already acts as a partial safeguard (the model can only call two pre-defined, parameterised queries and cannot access the database directly), but proper rate-limiting per session and cost alerts should be added.
+- **AI Safeguards**: Rate-limiting and cost tracking on the two AI endpoints; right now there's no guard against repeated/expensive queries, which a production system serving real managers would need. The function-calling tool surface already acts as a partial safeguard (the model can only call two pre-defined, parameterised queries and cannot access the database directly), but proper rate-limiting per session and cost alerts should be added.
 
 ## Self-assessment
 
@@ -104,7 +104,7 @@ no real authentication implemented.
 Module 1 (Admin order submission) — standard CRUD form over a single table. The Technician portal was also straightforward, simply listing assigned jobs and providing a form to complete them.
 
 **Which module was hardest?**
-The AI Operations Query module — specifically integrating function calling correctly with the `@google/genai` v2 SDK. The SDK's `generateContent` only accepts three top-level fields (`model`, `contents`, `config`), and all configuration — including `systemInstruction`, `tools`, and `toolConfig` — must be nested inside `config`. Passing them at the top level causes them to be silently ignored with no error thrown and no TypeScript warning, which made the bug extremely difficult to diagnose. The model appeared to work (no crash) but had no tools and ignored all instructions, responding from training data instead of querying the database.
+The AI Operations Query module — specifically integrating function calling correctly with the `@google/genai` v2 SDK. The SDK's `generateContent` only accepts three top-level fields (`model`, `contents`, `config`), and all configuration (`systemInstruction`, `tools`, and `toolConfig`) must be nested inside `config`. Passing them at the top level causes them to be silently ignored with no error thrown and no TypeScript warning, which made the bug extremely difficult to diagnose. The model appeared to work (no crash) but had no tools and ignored all instructions, responding from training data instead of querying the database.
 
 **What would you improve in a real production system?**
 As detailed in the section above, I would focus heavily on true authentication/authorization (Supabase Auth + RLS), automated messaging (WhatsApp Business API), and backend performance optimisations (materialized views for KPIs and caching) to ensure it scales beyond a prototype.
@@ -116,8 +116,10 @@ Built iteratively with AI assistants (Claude, Gemini / Antigravity). I used them
 
 ```bash
 npm install
-cp .env.example .env   # fill in Supabase URL/anon key (both VITE_ and server-side
-                        # versions) and GEMINI_API_KEY
+
+cp .env.example .env  
+ # fill in Supabase URL/anon key (both VITE_ and server-side
+ # versions) and GEMINI_API_KEY
 ```
 
 The core app (Modules 1–3, Manager review) runs with:
