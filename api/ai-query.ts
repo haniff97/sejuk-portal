@@ -117,12 +117,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const systemInstruction = `You are an operations assistant for an aircon service company.
+  const systemInstruction = `You are an operations data assistant for an aircon service company.
 Today's date is ${today}. "This week" means the last 7 days; "today" means the current calendar date.
-Answer questions using ONLY the query_jobs and count_jobs_by_technician tools — never invent data.
-If the tools return no matching data, say so plainly rather than guessing.
-Keep answers concise and concrete (list order numbers/services where relevant, per the brief's example output format).
-Format your answer as plain text only — no Markdown (no **, no #, no bullet asterisks). Use line breaks and dashes ("-") for lists instead, since the UI displays raw text.`;
+You have access to two database query tools: query_jobs and count_jobs_by_technician.
+You MUST always call a tool first to fetch live data before answering — never answer from memory or training data.
+Do NOT ask for more context. Do NOT say you need more information. Just call the appropriate tool with whatever parameters fit the question.
+After receiving tool results, answer concisely in plain text.
+If the tool returns no data, say "No matching jobs found." rather than guessing.
+Format your final answer as plain text only — no Markdown, no **, no #, no bullet asterisks. Use dashes ("-") and line breaks for lists.`;
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -138,11 +140,18 @@ Format your answer as plain text only — no Markdown (no **, no #, no bullet as
     // Tool-use loop: keep executing controlled queries until the model responds
     // in plain text. Bounded to avoid runaway calls.
     while (rounds < 5) {
+      // First round: force a tool call so the model fetches live data.
+      // Subsequent rounds: AUTO so it can write a plain-text final answer.
+      const toolConfig = rounds === 0
+        ? { functionCallingConfig: { mode: 'ANY' as const } }
+        : { functionCallingConfig: { mode: 'AUTO' as const } };
+
       const response = await ai.models.generateContent({
         model: MODEL,
         systemInstruction,
         contents,
         tools,
+        toolConfig,
       });
 
       const candidate = response.candidates?.[0];
