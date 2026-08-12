@@ -62,11 +62,13 @@ export default function WorkflowSupervisorPanel({ orders }: { orders: Order[] })
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             <span className="font-bold">AI Summary</span>
           </div>
-          {summary}
+          <div className="max-h-40 overflow-y-auto pr-1">
+            {summary}
+          </div>
         </div>
       )}
 
-      <ul className="space-y-2 text-sm text-amber-800 font-medium relative">
+      <ul className="space-y-2 text-sm text-amber-800 font-medium relative max-h-64 overflow-y-auto pr-2">
         {flags.map((f, i) => (
           <li key={i} className="flex items-start gap-2 bg-white/40 p-2.5 rounded-lg border border-amber-200/30">
             <span className="text-amber-500 mt-0.5">•</span>
