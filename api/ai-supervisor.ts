@@ -40,12 +40,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const response = await ai.models.generateContent({
       model: MODEL,
       systemInstruction:
-        'You summarize flagged order-review issues for an operations manager. ' +
-        'Given a JSON list of flags, write one short line per flag, grouped naturally. ' +
-        'Be direct and factual — no speculation about cause, just state what was detected. ' +
-        'Do not invent flags beyond what is given. ' +
-        'Format as plain text only — no Markdown (no **, no bullet asterisks). Use line breaks and dashes ("-") for lists instead.',
-      contents: [{ role: 'user', parts: [{ text: JSON.stringify(flags) }] }],
+        'You are a report formatter for an aircon service operations manager. ' +
+        'Your ONLY job is to immediately write a short plain-text summary of the flagged issues provided. ' +
+        'Do NOT ask questions. Do NOT offer options. Do NOT explain what you could do. ' +
+        'Just write the summary directly — one short sentence per flag, grouped by order. ' +
+        'Be factual and direct. Do not invent anything beyond the flags given. ' +
+        'Format as plain text only — no Markdown, no **, no #, no bullet asterisks. ' +
+        'Use dashes ("-") and line breaks for lists.',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text:
+                `Write a plain-text summary of the following flagged order issues for the manager. ` +
+                `Output the summary immediately with no preamble:\n\n${JSON.stringify(flags, null, 2)}`,
+            },
+          ],
+        },
+      ],
     });
 
     const summary = response.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('').trim() ?? '';
