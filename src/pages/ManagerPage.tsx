@@ -63,6 +63,19 @@ export default function ManagerPage() {
   const inProgress = orders.filter((o) => o.status === 'New' || o.status === 'Assigned' || o.status === 'In Progress');
 
   function OrderRow({ order, action }: { order: Order; action?: React.ReactNode }) {
+    const [showAttachments, setShowAttachments] = useState(false);
+    const hasAttachments = order.attachments && order.attachments.length > 0;
+    const hasReceipt = !!order.payment_receipt_url;
+
+    function fileName(url: string) {
+      try {
+        const decoded = decodeURIComponent(url);
+        return decoded.split('/').pop() ?? url;
+      } catch {
+        return url.split('/').pop() ?? url;
+      }
+    }
+
     return (
       <li className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-sky-200 hover:-translate-y-0.5 transition-all p-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-2">
@@ -73,16 +86,51 @@ export default function ManagerPage() {
           <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">{order.assigned_technician ?? 'Unassigned'}</span>
           <span className="text-slate-300">•</span>
           <span className="font-medium text-sky-700">Final: RM {(order.final_amount ?? order.quoted_price).toFixed(2)}</span>
-          {order.attachments && order.attachments.length > 0 && (
+          {(hasAttachments || hasReceipt) && (
             <>
               <span className="text-slate-300">•</span>
-              <span className="text-sky-600 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setShowAttachments((v) => !v)}
+                className="text-sky-600 flex items-center gap-1 hover:text-sky-800 transition-colors cursor-pointer"
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                {order.attachments.length} attachment(s)
-              </span>
+                {(order.attachments?.length ?? 0) + (hasReceipt ? 1 : 0)} attachment(s)
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${showAttachments ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
             </>
           )}
         </div>
+
+        {/* Attachment links — toggled by the button above */}
+        {showAttachments && (hasAttachments || hasReceipt) && (
+          <div className="mb-3 flex flex-col gap-1.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+            {order.attachments?.map((url, i) => (
+              <a
+                key={i}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-sky-700 hover:text-sky-900 hover:underline flex items-center gap-1.5 truncate"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                {fileName(url)}
+              </a>
+            ))}
+            {hasReceipt && (
+              <a
+                href={order.payment_receipt_url!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-emerald-700 hover:text-emerald-900 hover:underline flex items-center gap-1.5 truncate"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                Receipt — {fileName(order.payment_receipt_url!)}
+              </a>
+            )}
+          </div>
+        )}
+
         {order.work_done && (
           <p className="text-sm text-slate-700 bg-sky-50 p-3 rounded-lg border border-sky-100 mb-4">{order.work_done}</p>
         )}

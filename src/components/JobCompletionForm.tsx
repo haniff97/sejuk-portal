@@ -33,6 +33,16 @@ export default function JobCompletionForm({ order, technicianName, onCompleted, 
   const finalAmount = order.quoted_price + extra;
   const completedAt = new Date();
 
+  /** Replace every character outside [A-Za-z0-9._-] with a hyphen.
+   *  This covers the narrow no-break space (U+202F) macOS puts in screenshot
+   *  names (e.g. "9.34.58\u202FPM.png") which Supabase rejects as an invalid key.
+   */
+  function sanitizeFilename(name: string): string {
+    return name
+      .replace(/[^A-Za-z0-9._-]/g, '-') // replace unsafe chars
+      .replace(/-{2,}/g, '-');           // collapse consecutive hyphens
+  }
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files ?? []);
     if (selected.length > MAX_FILES) {
@@ -46,7 +56,7 @@ export default function JobCompletionForm({ order, technicianName, onCompleted, 
   async function uploadFiles(): Promise<string[]> {
     const urls: string[] = [];
     for (const file of files) {
-      const path = `${order.order_no}/${Date.now()}-${file.name}`;
+      const path = `${order.order_no}/${Date.now()}-${sanitizeFilename(file.name)}`;
       const { error: uploadError } = await supabase.storage
         .from('job-attachments')
         .upload(path, file);
@@ -59,7 +69,7 @@ export default function JobCompletionForm({ order, technicianName, onCompleted, 
 
   async function uploadReceipt(): Promise<string | null> {
     if (!receiptFile) return null;
-    const path = `${order.order_no}/receipt-${Date.now()}-${receiptFile.name}`;
+    const path = `${order.order_no}/receipt-${Date.now()}-${sanitizeFilename(receiptFile.name)}`;
     const { error: uploadError } = await supabase.storage
       .from('job-attachments')
       .upload(path, receiptFile);

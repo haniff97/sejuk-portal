@@ -19,6 +19,10 @@ field, Managers review and close them out.
   completion and on any completed job in the technician's list.
 - **Manager review flow** (ties the above together): review queue for `Job Done`
   orders → `Reviewed` → `Closed`, plus a read-only view of in-progress orders.
+  Attachment viewer on each order card — clicking the attachment count expands a
+  panel listing each uploaded photo/video/PDF as a named link (opens in new tab)
+  and the payment receipt separately, so managers can inspect job evidence without
+  leaving the review queue.
 - **AI Operations Query**: a chat panel in the Manager view where questions like
   "How many jobs were completed today?" or "Which technician completed the most
   jobs this week?" are answered from live order data. The model is given two
@@ -112,6 +116,14 @@ As detailed in the section above, I would focus heavily on true authentication/a
 **How did you use AI tools while building this project?**
 Built iteratively with AI assistants (Claude, Gemini / Antigravity). I used them to scaffold each module, generate boilerplate for React/Tailwind layouts, and plan out database migrations. Specifically, they were highly useful in help me working on the UI into a modern and card-layout based design, building out the responsive Recharts-based KPI Dashboard, and help me plan writing the SQL migration to add optional payment tracking fields to the schema. Code was verified continuously with `tsc --noEmit` and `vite build` after each addition.
 
+## Coverage vs. assessment brief
+
+This submission covers the full scope; all three core modules plus the Manager
+review flow and both optional AI challenges implemented and deployed to a live
+Vercel environment. Each module is individually functional and the system works
+end-to-end as a complete workflow.
+
+
 ## Running locally
 
 ```bash
@@ -142,4 +154,4 @@ bucket set up — see schema/policy SQL in the project notes, or ask for it agai
 
 ## Live demo
 
-https://sejuk-portal-psul8lcoc-haniff-hamdans-projects.vercel.app/
+https://sejuk-portal-bbdueksri-haniff-hamdans-projects.vercel.app/
