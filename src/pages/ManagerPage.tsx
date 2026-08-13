@@ -147,16 +147,16 @@ export default function ManagerPage() {
     <div className="max-w-3xl mx-auto p-6 text-slate-900 space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-indigo-600">Manager Dashboard</h1>
-        <div className="flex rounded-xl bg-slate-100 p-1 gap-1 text-sm shadow-inner">
+        <div className="flex rounded-xl bg-slate-100 p-1 gap-1 text-sm shadow-inner w-full sm:w-auto">
           <button
             onClick={() => setTab('review')}
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${tab === 'review' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${tab === 'review' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
           >
             Review Jobs
           </button>
           <button
             onClick={() => setTab('kpi')}
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${tab === 'kpi' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${tab === 'kpi' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
           >
             KPI Dashboard
           </button>
