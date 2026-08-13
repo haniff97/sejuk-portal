@@ -209,4 +209,4 @@ bucket set up — see schema/policy SQL in the project notes, or ask for it agai
 
 ## Live demo
 
-https://sejuk-portal-5bp8qk56a-haniff-hamdans-projects.vercel.app/
+https://sejuk-portal-pho1ix4gb-haniff-hamdans-projects.vercel.app
