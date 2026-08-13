@@ -95,13 +95,6 @@ Both AI features run as Vercel serverless functions (`/api/ai-query`, `/api/ai-s
 using the Gemini API (`gemini-3.5-flash-lite`) via the `@google/genai` v2 SDK with
 function calling.
 
-### Alignment with Assessment Focus
-
-- **How AI integrates with system data**: The AI runs via Vercel serverless functions that interact directly with the live database using the `@google/genai` SDK and function calling. It fetches live system data rather than relying on its training weights.
-- **How queries retrieve relevant records**: The model uses constrained, structured tools (`query_jobs`, `count_jobs_by_technician`) to translate natural language into precise, parameterized database queries. 
-- **How responses are generated clearly**: Raw data and detected anomalies (e.g., price variance, missing photos) are fed back to the Gemini model with specific system prompts, ensuring the output is a concise, readable, and professional summary for the Manager.
-- **How limitations are handled**: The system manages constraints gracefully by strictly limiting query size (e.g., 50-row cap), restricting the model to predefined function paths to avoid hallucinations, and documenting all known limitations (see below).
-
 ### What types of AI queries are supported
 
 The **Operations Query** panel (Manager view) accepts free-form natural language questions
@@ -176,7 +169,7 @@ The AI Operations Query module — specifically integrating function calling cor
 As detailed in the section above, I would focus heavily on true authentication/authorization (Supabase Auth + RLS), automated messaging (WhatsApp Business API), and backend performance optimisations (materialized views for KPIs and caching) to ensure it scales beyond a prototype. But since this is prototyp/assesement focus more on module i make a design easy to test.
 
 **How did you use AI tools while building this project?**
-Built iteratively with AI assistants (Claude, Gemini / Antigravity). I used them to scaffold each module, generate boilerplate for React/Tailwind layouts, and plan out database migrations. Specifically, they were highly useful in help me working on the UI into a modern and card-layout based design, building out the responsive Recharts-based KPI Dashboard, and help me plan writing the SQL migration to add optional payment tracking fields to the schema. Code was verified continuously with `tsc --noEmit` and `vite build` after each addition.
+Built iteratively with AI assistants (Claude, Gemini / Antigravity IDE). I used them to scaffold each module, generate boilerplate for React/Tailwind layouts, and plan out database migrations. Specifically, they were highly useful in help me working on the UI into a modern and card-layout based design, building out the responsive Recharts-based KPI Dashboard, and help me plan writing the SQL migration to add optional payment tracking fields to the schema. Code was verified continuously with `tsc --noEmit` and `vite build` after each addition.
 
 ## Coverage vs. assessment brief
 

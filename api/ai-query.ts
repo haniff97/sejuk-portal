@@ -10,7 +10,7 @@ const supabase = createClient(
 const MODEL = 'gemini-3.5-flash-lite';
 
 // Fixed, controlled query surface — the model can only call these.
-const functionDeclarations = [
+const functionDeclarations: any[] = [
   {
     name: 'query_jobs',
     description:
